@@ -9,7 +9,7 @@ namespace CineCatalog_API.Application.Validators
         {
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("O nome é obrigatório.")
-                .MaximumLength(150).WithMessage("O nome não pode exceder 150 caracteres.");
+                .MaximumLength(60).WithMessage("O nome não pode exceder 60 caracteres.");
 
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("O e-mail é obrigatório.")

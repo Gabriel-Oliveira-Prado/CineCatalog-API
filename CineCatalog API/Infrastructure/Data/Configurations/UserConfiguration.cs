@@ -12,7 +12,7 @@ namespace CineCatalog_API.Infrastructure.Data.Configurations
 
             builder.Property(u => u.Name)
                 .IsRequired()
-                .HasMaxLength(150);
+                .HasMaxLength(60);
 
             builder.Property(u => u.Email)
                 .IsRequired()
