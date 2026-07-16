@@ -27,9 +27,10 @@ namespace CineCatalog_API.Infrastructure.Repositories
         public async Task<IEnumerable<Movie>> GetUserFavoritesAsync(Guid userId)
         {
             return await _context.Favorites
+                .Include(f => f.Movie)
+                    .ThenInclude(m => m.Genres)
                 .Where(f => f.UserId == userId)
                 .Select(f => f.Movie)
-                .Include(m => m.Genres)
                 .ToListAsync();
         }
 
