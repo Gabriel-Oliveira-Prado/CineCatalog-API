@@ -4,6 +4,7 @@ using CineCatalog_API.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CineCatalog_API.Migrations
 {
     [DbContext(typeof(CineCatalogDbContext))]
-    partial class CineCatalogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716011211_AddUserAvatarAndStreamingPlatforms")]
+    partial class AddUserAvatarAndStreamingPlatforms
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

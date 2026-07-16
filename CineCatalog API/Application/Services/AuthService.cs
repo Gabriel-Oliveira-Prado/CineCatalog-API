@@ -160,6 +160,7 @@ namespace CineCatalog_API.Application.Services
 
             user.Name = request.Name;
             user.Email = request.Email;
+            user.AvatarUrl = request.AvatarUrl;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _userRepository.UpdateAsync(user);

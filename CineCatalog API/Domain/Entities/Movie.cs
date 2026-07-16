@@ -18,6 +18,7 @@ namespace CineCatalog_API.Domain.Entities
         public int ReviewsCount { get; set; } = 0;
         public string ImageUrl { get; set; } = string.Empty; // Poster/Imagem
         public string TrailerUrl { get; set; } = string.Empty; // Link do trailer
+        public string StreamingPlatforms { get; set; } = string.Empty; // JSON format: [{"name": "Netflix", "url": "..."}]
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 

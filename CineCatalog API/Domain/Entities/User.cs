@@ -12,6 +12,7 @@ namespace CineCatalog_API.Domain.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public bool IsActive { get; set; } = true;
+        public string? AvatarUrl { get; set; }
         
         // JWT Refresh Token fields
         public string? RefreshToken { get; set; }

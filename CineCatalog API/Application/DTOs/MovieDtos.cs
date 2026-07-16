@@ -15,6 +15,7 @@ namespace CineCatalog_API.Application.DTOs
         public string Rating { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public string TrailerUrl { get; set; } = string.Empty;
+        public string StreamingPlatforms { get; set; } = string.Empty;
         public List<Guid> GenreIds { get; set; } = new List<Guid>();
     }
 
@@ -30,6 +31,7 @@ namespace CineCatalog_API.Application.DTOs
         public string Rating { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public string TrailerUrl { get; set; } = string.Empty;
+        public string StreamingPlatforms { get; set; } = string.Empty;
         public List<Guid> GenreIds { get; set; } = new List<Guid>();
     }
 
@@ -45,6 +47,7 @@ namespace CineCatalog_API.Application.DTOs
         public double AverageRating { get; set; }
         public int ReviewsCount { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
+        public string StreamingPlatforms { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public List<GenreResponse> Genres { get; set; } = new List<GenreResponse>();
     }
@@ -64,6 +67,7 @@ namespace CineCatalog_API.Application.DTOs
         public int ReviewsCount { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public string TrailerUrl { get; set; } = string.Empty;
+        public string StreamingPlatforms { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<GenreResponse> Genres { get; set; } = new List<GenreResponse>();
