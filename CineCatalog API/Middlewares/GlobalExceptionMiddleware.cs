@@ -39,6 +39,7 @@ namespace CineCatalog_API.Middlewares
             var statusCode = exception switch
             {
                 NotFoundException => StatusCodes.Status404NotFound,
+                TmdbUnavailableException => StatusCodes.Status404NotFound,
                 BadRequestException => StatusCodes.Status400BadRequest,
                 ConflictException => StatusCodes.Status409Conflict,
                 UnauthorizedException => StatusCodes.Status401Unauthorized,
@@ -55,6 +56,7 @@ namespace CineCatalog_API.Middlewares
                 Title = exception switch
                 {
                     NotFoundException => "Recurso não encontrado",
+                    TmdbUnavailableException => "Filme não encontrado",
                     BadRequestException => "Requisição inválida",
                     ConflictException => "Conflito de dados",
                     UnauthorizedException => "Não autorizado",

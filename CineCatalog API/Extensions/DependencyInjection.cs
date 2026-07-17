@@ -13,6 +13,7 @@ using CineCatalog_API.Infrastructure.Security;
 using CineCatalog_API.Application.Interfaces;
 using CineCatalog_API.Application.Services;
 using CineCatalog_API.Application.Mappings;
+using CineCatalog_API.Infrastructure.ExternalServices.Tmdb;
 
 namespace CineCatalog_API.Extensions
 {
@@ -39,6 +40,11 @@ namespace CineCatalog_API.Extensions
             services.AddScoped<IMovieService, MovieService>();
             services.AddScoped<IGenreService, GenreService>();
             services.AddScoped<IFavoriteService, FavoriteService>();
+
+            // TMDb Integration Services
+            services.Configure<TmdbSettings>(configuration.GetSection("Tmdb"));
+            services.AddHttpClient<ITmdbClient, TmdbClient>();
+            services.AddScoped<IMovieCatalogSyncService, MovieCatalogSyncService>();
 
             // Security Helpers
             services.AddScoped<IPasswordHasher, PasswordHasher>();

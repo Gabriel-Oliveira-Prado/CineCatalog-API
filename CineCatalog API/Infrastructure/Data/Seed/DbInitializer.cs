@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CineCatalog_API.Domain.Entities;
 using CineCatalog_API.Domain.Interfaces;
+using CineCatalog_API.Application.Interfaces;
 
 namespace CineCatalog_API.Infrastructure.Data.Seed
 {
@@ -55,14 +56,6 @@ namespace CineCatalog_API.Infrastructure.Data.Seed
             }
 
             // 4. Seed Movies
-            // Limpa filmes existentes para forçar a atualização com as capas reais, classificações e plataformas
-            var existingMovies = await context.Movies.ToListAsync();
-            if (existingMovies.Any())
-            {
-                context.Movies.RemoveRange(existingMovies);
-                await context.SaveChangesAsync();
-            }
-
             var actionGenre = await context.Genres.FirstOrDefaultAsync(g => g.Name == "Ação");
             var sciFiGenre = await context.Genres.FirstOrDefaultAsync(g => g.Name == "Ficção Científica");
             var dramaGenre = await context.Genres.FirstOrDefaultAsync(g => g.Name == "Drama");
@@ -1114,11 +1107,105 @@ namespace CineCatalog_API.Infrastructure.Data.Seed
                 }
             };
 
-            foreach (var movie in candidateMovies)
+            // Remove qualquer filme que não esteja na lista padrão de sementes (candidateMovies) para limpar adições manuais/antigas
+            var seededTitles = candidateMovies.Select(m => m.Title.Trim().ToLowerInvariant()).ToHashSet();
+            var currentMovies = await context.Movies.ToListAsync();
+            var moviesToDelete = currentMovies
+                .Where(m => !seededTitles.Contains(m.Title.Trim().ToLowerInvariant()))
+                .ToList();
+
+            if (moviesToDelete.Count > 0)
             {
-                await context.Movies.AddAsync(movie);
+                context.Movies.RemoveRange(moviesToDelete);
+                await context.SaveChangesAsync();
             }
-            await context.SaveChangesAsync();
+
+            if (!await context.Movies.AnyAsync())
+            {
+                foreach (var movie in candidateMovies)
+                {
+                    await context.Movies.AddAsync(movie);
+                }
+                await context.SaveChangesAsync();
+            }
+
+            // Inicia a atualização em segundo plano das capas e dados dos filmes usando o TMDb
+            _ = Task.Run(async () =>
+            {
+                using var bgScope = serviceProvider.CreateScope();
+                var dbContext = bgScope.ServiceProvider.GetRequiredService<CineCatalogDbContext>();
+                var tmdbClient = bgScope.ServiceProvider.GetRequiredService<ITmdbClient>();
+                
+                try
+                {
+                    var moviesToUpdate = await dbContext.Movies
+                        .Where(m => !m.TmdbId.HasValue || m.ImageUrl.Contains("amazon") || string.IsNullOrEmpty(m.ImageUrl))
+                        .ToListAsync();
+
+                    foreach (var movie in moviesToUpdate)
+                    {
+                        try
+                        {
+                            var tmdbResults = await tmdbClient.SearchMoviesAsync(movie.Title);
+                            var bestMatch = tmdbResults.FirstOrDefault(r => 
+                                r.Title.Equals(movie.Title, StringComparison.OrdinalIgnoreCase));
+                            
+                            if (bestMatch == null)
+                            {
+                                bestMatch = tmdbResults.FirstOrDefault();
+                            }
+
+                            if (bestMatch != null)
+                            {
+                                var alreadyExists = await dbContext.Movies.AnyAsync(m => m.TmdbId == bestMatch.Id && m.Id != movie.Id);
+                                if (!alreadyExists)
+                                {
+                                    movie.TmdbId = bestMatch.Id;
+                                
+                                    var details = await tmdbClient.GetMovieDetailsAsync(bestMatch.Id);
+                                    var rating = await tmdbClient.GetReleaseDateCertificationAsync(bestMatch.Id);
+                                    
+                                    if (!string.IsNullOrEmpty(rating))
+                                    {
+                                        movie.Rating = rating;
+                                    }
+                                    
+                                    if (!string.IsNullOrEmpty(details.PosterPath))
+                                    {
+                                        movie.ImageUrl = $"https://image.tmdb.org/t/p/w500/{details.PosterPath.TrimStart('/')}";
+                                    }
+
+                                    if (!string.IsNullOrEmpty(details.BackdropPath))
+                                    {
+                                        movie.BackdropUrl = $"https://image.tmdb.org/t/p/w1280/{details.BackdropPath.TrimStart('/')}";
+                                    }
+
+                                    if (!string.IsNullOrEmpty(details.Overview))
+                                    {
+                                        movie.Synopsis = details.Overview;
+                                        movie.Description = details.Overview.Length > 200 
+                                            ? details.Overview.Substring(0, 197) + "..." 
+                                            : details.Overview;
+                                    }
+
+                                    dbContext.Movies.Update(movie);
+                                    await dbContext.SaveChangesAsync();
+                                }
+                            }
+                            
+                            await Task.Delay(500); // Evita sobrecarga na API do TMDb
+                        }
+                        catch (Exception)
+                        {
+                            // Ignora erros individuais de filmes
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // Ignora erro geral
+                }
+            });
         }
     }
 }

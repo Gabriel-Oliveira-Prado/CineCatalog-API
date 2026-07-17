@@ -17,6 +17,7 @@ namespace CineCatalog_API.Controllers
     public class MoviesController : ControllerBase
     {
         private readonly IMovieService _movieService;
+        private readonly IMovieCatalogSyncService _movieCatalogSyncService;
         private readonly IValidator<MovieCreateRequest> _createValidator;
         private readonly IValidator<MovieUpdateRequest> _updateValidator;
         private readonly IValidator<ReviewCreateRequest> _reviewCreateValidator;
@@ -24,12 +25,14 @@ namespace CineCatalog_API.Controllers
 
         public MoviesController(
             IMovieService movieService,
+            IMovieCatalogSyncService movieCatalogSyncService,
             IValidator<MovieCreateRequest> createValidator,
             IValidator<MovieUpdateRequest> updateValidator,
             IValidator<ReviewCreateRequest> reviewCreateValidator,
             IValidator<ReviewUpdateRequest> reviewUpdateValidator)
         {
             _movieService = movieService;
+            _movieCatalogSyncService = movieCatalogSyncService;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
             _reviewCreateValidator = reviewCreateValidator;
@@ -43,7 +46,30 @@ namespace CineCatalog_API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PagedResult<MovieResponse>))]
         public async Task<IActionResult> Get([FromQuery] MovieQueryParameters queryParams)
         {
-            var result = await _movieService.GetFilteredAndPaginatedAsync(queryParams);
+            if (!string.IsNullOrWhiteSpace(queryParams.Search))
+            {
+                await _movieCatalogSyncService.SearchWithFallbackAsync(queryParams.Search);
+            }
+
+            var userId = TryGetCurrentUserId();
+            var result = await _movieService.GetFilteredAndPaginatedAsync(queryParams, userId);
+            return Ok(result);
+        }
+
+        private Guid? TryGetCurrentUserId()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return Guid.TryParse(userId, out var parsedUserId) ? parsedUserId : null;
+        }
+
+        /// <summary>
+        /// Obtém a lista dos filmes mais populares e em alta na semana a partir do TMDb.
+        /// </summary>
+        [HttpGet("trending")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<MovieResponse>))]
+        public async Task<IActionResult> GetTrending()
+        {
+            var result = await _movieCatalogSyncService.GetTrendingMoviesAsync();
             return Ok(result);
         }
 
@@ -57,6 +83,19 @@ namespace CineCatalog_API.Controllers
         {
             var movie = await _movieService.GetByIdAsync(id);
             return Ok(movie);
+        }
+
+        /// <summary>
+        /// Retorna as opções de assinatura, gratuidade, anúncios, aluguel e compra no Brasil.
+        /// A consulta é adiada até esta rota ser chamada para não atrasar o carregamento do filme.
+        /// </summary>
+        [HttpGet("{id:guid}/streaming-platforms")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StreamingAvailabilityResponse))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetStreamingPlatforms([FromRoute] Guid id)
+        {
+            var availability = await _movieCatalogSyncService.GetStreamingAvailabilityAsync(id);
+            return Ok(availability);
         }
 
         /// <summary>

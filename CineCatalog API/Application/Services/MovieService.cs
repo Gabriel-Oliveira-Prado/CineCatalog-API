@@ -56,7 +56,7 @@ namespace CineCatalog_API.Application.Services
             return _mapper.Map<MovieDetailResponse>(movie);
         }
 
-        public async Task<PagedResult<MovieResponse>> GetFilteredAndPaginatedAsync(MovieQueryParameters queryParams)
+        public async Task<PagedResult<MovieResponse>> GetFilteredAndPaginatedAsync(MovieQueryParameters queryParams, Guid? userId = null)
         {
             var (movies, totalCount) = await _movieRepository.GetFilteredAndPaginatedAsync(
                 queryParams.Search,
@@ -70,7 +70,22 @@ namespace CineCatalog_API.Application.Services
                 queryParams.SortBy,
                 queryParams.IsDescending);
 
-            var mappedMovies = _mapper.Map<IEnumerable<MovieResponse>>(movies);
+            var mappedMovies = _mapper.Map<List<MovieResponse>>(movies);
+            if (userId.HasValue && mappedMovies.Count > 0)
+            {
+                var reviewsByMovie = (await _reviewRepository.GetByUserIdAsync(userId.Value))
+                    .GroupBy(review => review.MovieId)
+                    .ToDictionary(group => group.Key, group => group.First().Rating);
+
+                foreach (var movie in mappedMovies)
+                {
+                    if (reviewsByMovie.TryGetValue(movie.Id, out var rating))
+                    {
+                        movie.CurrentUserReviewRating = rating;
+                    }
+                }
+            }
+
             return new PagedResult<MovieResponse>(mappedMovies, totalCount, queryParams.PageNumber, queryParams.PageSize);
         }
 

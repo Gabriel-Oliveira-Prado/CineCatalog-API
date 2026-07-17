@@ -114,6 +114,20 @@ namespace CineCatalog_API.Infrastructure.Repositories
             return (movies, totalCount);
         }
 
+        public async Task<Movie?> GetByTmdbIdAsync(int tmdbId)
+        {
+            return await _context.Movies
+                .Include(m => m.Genres)
+                .FirstOrDefaultAsync(m => m.TmdbId == tmdbId);
+        }
+
+        public async Task<Movie?> GetByTitleAsync(string title)
+        {
+            return await _context.Movies
+                .Include(m => m.Genres)
+                .FirstOrDefaultAsync(m => m.Title.ToLower() == title.ToLower());
+        }
+
         public async Task AddAsync(Movie movie)
         {
             await _context.Movies.AddAsync(movie);

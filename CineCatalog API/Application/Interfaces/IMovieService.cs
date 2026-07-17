@@ -9,7 +9,7 @@ namespace CineCatalog_API.Application.Interfaces
     public interface IMovieService
     {
         Task<MovieDetailResponse> CreateAsync(MovieCreateRequest request);
-        Task<PagedResult<MovieResponse>> GetFilteredAndPaginatedAsync(MovieQueryParameters queryParams);
+        Task<PagedResult<MovieResponse>> GetFilteredAndPaginatedAsync(MovieQueryParameters queryParams, Guid? userId = null);
         Task<MovieDetailResponse> GetByIdAsync(Guid id);
         Task<MovieDetailResponse> UpdateAsync(Guid id, MovieUpdateRequest request);
         Task DeleteAsync(Guid id);

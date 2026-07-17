@@ -31,6 +31,13 @@ namespace CineCatalog_API.Infrastructure.Repositories
                 .FirstOrDefaultAsync(r => r.UserId == userId && r.MovieId == movieId);
         }
 
+        public async Task<IEnumerable<Review>> GetByUserIdAsync(Guid userId)
+        {
+            return await _context.Reviews
+                .Where(r => r.UserId == userId)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Review>> GetByMovieIdAsync(Guid movieId)
         {
             return await _context.Reviews

@@ -17,8 +17,10 @@ namespace CineCatalog_API.Application.Mappings
             CreateMap<GenreUpdateRequest, Genre>();
 
             // Movie mappings
-            CreateMap<Movie, MovieResponse>();
-            CreateMap<Movie, MovieDetailResponse>();
+            CreateMap<Movie, MovieResponse>()
+                .ForMember(dest => dest.StreamingPlatforms, opt => opt.MapFrom(src => StreamingPlatformsJson.Deserialize(src.StreamingPlatforms)));
+            CreateMap<Movie, MovieDetailResponse>()
+                .ForMember(dest => dest.StreamingPlatforms, opt => opt.MapFrom(src => StreamingPlatformsJson.Deserialize(src.StreamingPlatforms)));
             CreateMap<MovieCreateRequest, Movie>()
                 .ForMember(dest => dest.Genres, opt => opt.Ignore())
                 .ForMember(dest => dest.Reviews, opt => opt.Ignore())
@@ -31,7 +33,8 @@ namespace CineCatalog_API.Application.Mappings
 
             // Review mappings
             CreateMap<Review, ReviewResponse>()
-                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.Name));
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.Name))
+                .ForMember(dest => dest.UserAvatarUrl, opt => opt.MapFrom(src => src.User.AvatarUrl));
 
             CreateMap<ReviewUpdateRequest, Review>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())

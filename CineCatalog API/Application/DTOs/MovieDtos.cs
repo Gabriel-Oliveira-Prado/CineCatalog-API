@@ -47,7 +47,9 @@ namespace CineCatalog_API.Application.DTOs
         public double AverageRating { get; set; }
         public int ReviewsCount { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
-        public string StreamingPlatforms { get; set; } = string.Empty;
+        public string? BackdropUrl { get; set; }
+        public List<StreamingPlatformResponse> StreamingPlatforms { get; set; } = new List<StreamingPlatformResponse>();
+        public int? CurrentUserReviewRating { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<GenreResponse> Genres { get; set; } = new List<GenreResponse>();
     }
@@ -66,8 +68,9 @@ namespace CineCatalog_API.Application.DTOs
         public double AverageRating { get; set; }
         public int ReviewsCount { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
+        public string? BackdropUrl { get; set; }
         public string TrailerUrl { get; set; } = string.Empty;
-        public string StreamingPlatforms { get; set; } = string.Empty;
+        public List<StreamingPlatformResponse> StreamingPlatforms { get; set; } = new List<StreamingPlatformResponse>();
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<GenreResponse> Genres { get; set; } = new List<GenreResponse>();

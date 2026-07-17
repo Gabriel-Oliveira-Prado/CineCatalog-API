@@ -17,8 +17,10 @@ namespace CineCatalog_API.Domain.Entities
         public double AverageRating { get; set; } = 0.0;
         public int ReviewsCount { get; set; } = 0;
         public string ImageUrl { get; set; } = string.Empty; // Poster/Imagem
+        public string? BackdropUrl { get; set; } // Banner/Fundo em alta resolução
         public string TrailerUrl { get; set; } = string.Empty; // Link do trailer
-        public string StreamingPlatforms { get; set; } = string.Empty; // JSON format: [{"name": "Netflix", "url": "..."}]
+        public string StreamingPlatforms { get; set; } = string.Empty; // JSON canônico: [{"name":"Netflix","availability":"Assinatura","link":"..."}]
+        public int? TmdbId { get; set; } // Id do filme no TMDb, null se foi cadastrado manualmente
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 

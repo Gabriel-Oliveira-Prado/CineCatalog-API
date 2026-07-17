@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using CineCatalog_API.Application.DTOs;
@@ -15,17 +16,20 @@ namespace CineCatalog_API.Application.Services
         private readonly IFavoriteRepository _favoriteRepository;
         private readonly IMovieRepository _movieRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IReviewRepository _reviewRepository;
         private readonly IMapper _mapper;
 
         public FavoriteService(
             IFavoriteRepository favoriteRepository,
             IMovieRepository movieRepository,
             IUserRepository userRepository,
+            IReviewRepository reviewRepository,
             IMapper mapper)
         {
             _favoriteRepository = favoriteRepository;
             _movieRepository = movieRepository;
             _userRepository = userRepository;
+            _reviewRepository = reviewRepository;
             _mapper = mapper;
         }
 
@@ -78,7 +82,20 @@ namespace CineCatalog_API.Application.Services
             }
 
             var movies = await _favoriteRepository.GetUserFavoritesAsync(userId);
-            return _mapper.Map<IEnumerable<MovieResponse>>(movies);
+            var responses = _mapper.Map<List<MovieResponse>>(movies);
+            var reviewsByMovie = (await _reviewRepository.GetByUserIdAsync(userId))
+                .GroupBy(review => review.MovieId)
+                .ToDictionary(group => group.Key, group => group.First().Rating);
+
+            foreach (var movie in responses)
+            {
+                if (reviewsByMovie.TryGetValue(movie.Id, out var rating))
+                {
+                    movie.CurrentUserReviewRating = rating;
+                }
+            }
+
+            return responses;
         }
     }
 }

@@ -17,6 +17,7 @@ namespace CineCatalog.Tests.Services
         private readonly Mock<IFavoriteRepository> _favoriteRepositoryMock;
         private readonly Mock<IMovieRepository> _movieRepositoryMock;
         private readonly Mock<IUserRepository> _userRepositoryMock;
+        private readonly Mock<IReviewRepository> _reviewRepositoryMock;
         private readonly IMapper _mapper;
         private readonly FavoriteService _favoriteService;
 
@@ -25,6 +26,7 @@ namespace CineCatalog.Tests.Services
             _favoriteRepositoryMock = new Mock<IFavoriteRepository>();
             _movieRepositoryMock = new Mock<IMovieRepository>();
             _userRepositoryMock = new Mock<IUserRepository>();
+            _reviewRepositoryMock = new Mock<IReviewRepository>();
 
             var mappingConfig = new MapperConfiguration(mc =>
             {
@@ -36,6 +38,7 @@ namespace CineCatalog.Tests.Services
                 _favoriteRepositoryMock.Object,
                 _movieRepositoryMock.Object,
                 _userRepositoryMock.Object,
+                _reviewRepositoryMock.Object,
                 _mapper
             );
         }

@@ -5,34 +5,23 @@
 namespace CineCatalog_API.Migrations
 {
     /// <inheritdoc />
-    public partial class AddUserAvatarAndStreamingPlatforms : Migration
+    public partial class AddBackdropUrlToMovie : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "AvatarUrl",
-                table: "Users",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "StreamingPlatforms",
+                name: "BackdropUrl",
                 table: "Movies",
                 type: "nvarchar(max)",
-                nullable: false,
-                defaultValue: "");
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "AvatarUrl",
-                table: "Users");
-
-            migrationBuilder.DropColumn(
-                name: "StreamingPlatforms",
+                name: "BackdropUrl",
                 table: "Movies");
         }
     }

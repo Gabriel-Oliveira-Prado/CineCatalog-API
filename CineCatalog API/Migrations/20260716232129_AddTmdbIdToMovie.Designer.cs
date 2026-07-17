@@ -4,6 +4,7 @@ using CineCatalog_API.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CineCatalog_API.Migrations
 {
     [DbContext(typeof(CineCatalogDbContext))]
-    partial class CineCatalogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716232129_AddTmdbIdToMovie")]
+    partial class AddTmdbIdToMovie
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,9 +67,6 @@ namespace CineCatalog_API.Migrations
 
                     b.Property<double>("AverageRating")
                         .HasColumnType("float");
-
-                    b.Property<string>("BackdropUrl")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Cast")
                         .IsRequired()

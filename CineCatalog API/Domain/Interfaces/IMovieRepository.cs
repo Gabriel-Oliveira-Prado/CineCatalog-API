@@ -20,6 +20,8 @@ namespace CineCatalog_API.Domain.Interfaces
             int pageSize,
             string? sortBy,
             bool isDescending);
+        Task<Movie?> GetByTmdbIdAsync(int tmdbId);
+        Task<Movie?> GetByTitleAsync(string title);
         Task AddAsync(Movie movie);
         Task UpdateAsync(Movie movie);
         Task DeleteAsync(Movie movie);

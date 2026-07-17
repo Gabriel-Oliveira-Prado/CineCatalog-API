@@ -16,6 +16,10 @@ namespace CineCatalog_API.Infrastructure.Data.Configurations
 
             builder.HasIndex(m => m.Title); // index for titles searching
 
+            builder.HasIndex(m => m.TmdbId)
+                .IsUnique()
+                .HasFilter("[TmdbId] IS NOT NULL");
+
             builder.Property(m => m.Description)
                 .HasMaxLength(1000);
 
