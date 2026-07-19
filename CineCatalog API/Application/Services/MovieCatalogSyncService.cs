@@ -58,123 +58,17 @@ namespace CineCatalog_API.Application.Services
 
             foreach (var result in resultsToImport)
             {
-                // Checa se o filme já existe localmente por TmdbId ou por Título para não duplicar
-                var existingMovie = await _movieRepository.GetByTmdbIdAsync(result.Id);
-                if (existingMovie == null)
-                {
-                    existingMovie = await _movieRepository.GetByTitleAsync(result.Title);
-                    if (existingMovie != null)
-                    {
-                        // Se encontramos por título mas ele não tinha TmdbId associado, associamos agora
-                        if (!existingMovie.TmdbId.HasValue)
-                        {
-                            existingMovie.TmdbId = result.Id;
-                            // Se o filme existente não tiver imagem de capa ou tiver uma capa antiga/Amazon, atualiza também
-                            if ((string.IsNullOrEmpty(existingMovie.ImageUrl) || existingMovie.ImageUrl.Contains("amazon")) && !string.IsNullOrEmpty(result.PosterPath))
-                            {
-                                existingMovie.ImageUrl = $"{_tmdbSettings.ImageBaseUrl.TrimEnd('/')}/{result.PosterPath.TrimStart('/')}";
-                            }
-                            await _movieRepository.UpdateAsync(existingMovie);
-                        }
-                    }
-                }
-
-                if (existingMovie != null)
-                {
-                    importedMovies.Add(existingMovie);
-                    continue;
-                }
-
                 try
                 {
-                    // Busca detalhes, créditos, trailer e classificação indicativa em paralelo para otimizar desempenho
-                    var detailsTask = _tmdbClient.GetMovieDetailsAsync(result.Id);
-                    var creditsTask = _tmdbClient.GetCreditsAsync(result.Id);
-                    var trailerTask = _tmdbClient.GetTrailerUrlAsync(result.Id);
-                    var ratingTask = _tmdbClient.GetReleaseDateCertificationAsync(result.Id);
-
-                    await Task.WhenAll(detailsTask, creditsTask, trailerTask, ratingTask);
-
-                    var details = await detailsTask;
-                    var credits = await creditsTask;
-                    var trailerUrl = await trailerTask;
-                    var rating = await ratingTask;
-
-                    // Mapeamento dos campos objetivos
-                    var director = credits.Crew?.FirstOrDefault(c => c.Job.Equals("Director", StringComparison.OrdinalIgnoreCase))?.Name ?? "Desconhecido";
-                    var cast = string.Join(", ", credits.Cast?.Take(5).Select(c => c.Name) ?? Array.Empty<string>());
-                    
-                    int releaseYear = 0;
-                    if (DateTime.TryParse(details.ReleaseDate, out var date))
+                    var movie = await ImportMovieFromTmdbAsync(result);
+                    if (movie != null)
                     {
-                        releaseYear = date.Year;
+                        importedMovies.Add(movie);
                     }
-                    else if (!string.IsNullOrEmpty(details.ReleaseDate) && details.ReleaseDate.Length >= 4)
-                    {
-                        int.TryParse(details.ReleaseDate.Substring(0, 4), out releaseYear);
-                    }
-
-                    var duration = details.Runtime ?? 0;
-
-                    // Gêneros
-                    var genreNames = details.Genres?.Select(g => g.Name).ToList() ?? new List<string>();
-                    var genresStr = genreNames.Count > 0 ? string.Join(", ", genreNames) : "Gênero não informado";
-
-                    // Geração de descrição e sinopse: usa a original do TMDb se disponível, senão gera baseada em fatos
-                    var synopsis = !string.IsNullOrWhiteSpace(details.Overview) 
-                        ? details.Overview 
-                        : $"Acompanhe a história desta produção de {genresStr.ToLower()} que conta com direção de {director} e grande elenco incluindo {cast}. Lançado originalmente no ano de {releaseYear}.";
-                    
-                    var description = synopsis.Length > 200 
-                        ? synopsis.Substring(0, 197) + "..." 
-                        : synopsis;
-
-                    var movie = new Movie
-                    {
-                        Id = Guid.NewGuid(),
-                        Title = details.Title,
-                        TmdbId = details.Id,
-                        ReleaseYear = releaseYear,
-                        DurationMinutes = duration,
-                        ImageUrl = string.IsNullOrEmpty(details.PosterPath) ? string.Empty : $"{_tmdbSettings.ImageBaseUrl.TrimEnd('/')}/{details.PosterPath.TrimStart('/')}",
-                        BackdropUrl = string.IsNullOrEmpty(details.BackdropPath) ? string.Empty : $"https://image.tmdb.org/t/p/w1280/{details.BackdropPath.TrimStart('/')}",
-                        TrailerUrl = trailerUrl ?? string.Empty,
-                        Director = director,
-                        Cast = cast,
-                        Description = description.Length > 1000 ? description.Substring(0, 997) + "..." : description,
-                        Synopsis = synopsis.Length > 4000 ? synopsis.Substring(0, 3997) + "..." : synopsis,
-                        Rating = rating ?? "Livre",
-                        AverageRating = 0.0,
-                        ReviewsCount = 0,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        Genres = new List<Genre>()
-                    };
-
-                    // Mapeia os gêneros para as entidades locais existentes ou cria novos se necessário
-                    foreach (var tg in details.Genres ?? new List<TmdbGenre>())
-                    {
-                        var localGenre = await _genreRepository.GetByNameAsync(tg.Name);
-                        if (localGenre == null)
-                        {
-                            localGenre = new Genre
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = tg.Name
-                            };
-                            await _genreRepository.AddAsync(localGenre);
-                        }
-                        movie.Genres.Add(localGenre);
-                    }
-
-                    // Salva o filme importado no banco local
-                    await _movieRepository.AddAsync(movie);
-                    importedMovies.Add(movie);
                 }
                 catch (Exception ex)
                 {
                     // Loga o erro de importação do filme específico e continua com os outros
-                    // Desta forma, uma falha em um filme não quebra a busca inteira
                     System.Diagnostics.Debug.WriteLine($"Erro ao importar filme TMDb ID {result.Id}: {ex.Message}");
                 }
             }
@@ -201,108 +95,13 @@ namespace CineCatalog_API.Application.Services
 
             foreach (var result in resultsToImport)
             {
-                var existingMovie = await _movieRepository.GetByTmdbIdAsync(result.Id);
-                if (existingMovie == null)
-                {
-                    existingMovie = await _movieRepository.GetByTitleAsync(result.Title);
-                    if (existingMovie != null)
-                    {
-                        if (!existingMovie.TmdbId.HasValue)
-                        {
-                            existingMovie.TmdbId = result.Id;
-                            if ((string.IsNullOrEmpty(existingMovie.ImageUrl) || existingMovie.ImageUrl.Contains("amazon")) && !string.IsNullOrEmpty(result.PosterPath))
-                            {
-                                existingMovie.ImageUrl = $"{_tmdbSettings.ImageBaseUrl.TrimEnd('/')}/{result.PosterPath.TrimStart('/')}";
-                            }
-                            await _movieRepository.UpdateAsync(existingMovie);
-                        }
-                    }
-                }
-
-                if (existingMovie != null)
-                {
-                    importedMovies.Add(existingMovie);
-                    continue;
-                }
-
                 try
                 {
-                    var detailsTask = _tmdbClient.GetMovieDetailsAsync(result.Id);
-                    var creditsTask = _tmdbClient.GetCreditsAsync(result.Id);
-                    var trailerTask = _tmdbClient.GetTrailerUrlAsync(result.Id);
-                    var ratingTask = _tmdbClient.GetReleaseDateCertificationAsync(result.Id);
-
-                    await Task.WhenAll(detailsTask, creditsTask, trailerTask, ratingTask);
-
-                    var details = await detailsTask;
-                    var credits = await creditsTask;
-                    var trailerUrl = await trailerTask;
-                    var rating = await ratingTask;
-
-                    var director = credits.Crew?.FirstOrDefault(c => c.Job.Equals("Director", StringComparison.OrdinalIgnoreCase))?.Name ?? "Desconhecido";
-                    var cast = string.Join(", ", credits.Cast?.Take(5).Select(c => c.Name) ?? Array.Empty<string>());
-                    
-                    int releaseYear = 0;
-                    if (DateTime.TryParse(details.ReleaseDate, out var date))
+                    var movie = await ImportMovieFromTmdbAsync(result);
+                    if (movie != null)
                     {
-                        releaseYear = date.Year;
+                        importedMovies.Add(movie);
                     }
-                    else if (!string.IsNullOrEmpty(details.ReleaseDate) && details.ReleaseDate.Length >= 4)
-                    {
-                        int.TryParse(details.ReleaseDate.Substring(0, 4), out releaseYear);
-                    }
-
-                    var duration = details.Runtime ?? 0;
-                    var genreNames = details.Genres?.Select(g => g.Name).ToList() ?? new List<string>();
-                    var genresStr = genreNames.Count > 0 ? string.Join(", ", genreNames) : "Gênero não informado";
-
-                    var synopsis = !string.IsNullOrWhiteSpace(details.Overview) 
-                        ? details.Overview 
-                        : $"Acompanhe a história desta produção de {genresStr.ToLower()} que conta com direção de {director} e grande elenco incluindo {cast}. Lançado originalmente no ano de {releaseYear}.";
-                    
-                    var description = synopsis.Length > 200 
-                        ? synopsis.Substring(0, 197) + "..." 
-                        : synopsis;
-
-                    var movie = new Movie
-                    {
-                        Id = Guid.NewGuid(),
-                        Title = details.Title,
-                        TmdbId = details.Id,
-                        ReleaseYear = releaseYear,
-                        DurationMinutes = duration,
-                        ImageUrl = string.IsNullOrEmpty(details.PosterPath) ? string.Empty : $"{_tmdbSettings.ImageBaseUrl.TrimEnd('/')}/{details.PosterPath.TrimStart('/')}",
-                        BackdropUrl = string.IsNullOrEmpty(details.BackdropPath) ? string.Empty : $"https://image.tmdb.org/t/p/w1280/{details.BackdropPath.TrimStart('/')}",
-                        TrailerUrl = trailerUrl ?? string.Empty,
-                        Director = director,
-                        Cast = cast,
-                        Description = description.Length > 1000 ? description.Substring(0, 997) + "..." : description,
-                        Synopsis = synopsis.Length > 4000 ? synopsis.Substring(0, 3997) + "..." : synopsis,
-                        Rating = rating ?? "Livre",
-                        AverageRating = 0.0,
-                        ReviewsCount = 0,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        Genres = new List<Genre>()
-                    };
-
-                    foreach (var tg in details.Genres ?? new List<TmdbGenre>())
-                    {
-                        var localGenre = await _genreRepository.GetByNameAsync(tg.Name);
-                        if (localGenre == null)
-                        {
-                            localGenre = new Genre
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = tg.Name
-                            };
-                            await _genreRepository.AddAsync(localGenre);
-                        }
-                        movie.Genres.Add(localGenre);
-                    }
-
-                    await _movieRepository.AddAsync(movie);
-                    importedMovies.Add(movie);
                 }
                 catch (Exception ex)
                 {
@@ -311,6 +110,117 @@ namespace CineCatalog_API.Application.Services
             }
 
             return _mapper.Map<List<MovieResponse>>(importedMovies);
+        }
+
+        private async Task<Movie?> ImportMovieFromTmdbAsync(TmdbSearchResult result)
+        {
+            // Checa se o filme já existe localmente por TmdbId ou por Título para não duplicar
+            var existingMovie = await _movieRepository.GetByTmdbIdAsync(result.Id);
+            if (existingMovie == null)
+            {
+                existingMovie = await _movieRepository.GetByTitleAsync(result.Title);
+                if (existingMovie != null)
+                {
+                    // Se encontramos por título mas ele não tinha TmdbId associado, associamos agora
+                    if (!existingMovie.TmdbId.HasValue)
+                    {
+                        existingMovie.TmdbId = result.Id;
+                        // Se o filme existente não tiver imagem de capa ou tiver uma capa antiga/Amazon, atualiza também
+                        if ((string.IsNullOrEmpty(existingMovie.ImageUrl) || existingMovie.ImageUrl.Contains("amazon")) && !string.IsNullOrEmpty(result.PosterPath))
+                        {
+                            existingMovie.ImageUrl = $"{_tmdbSettings.ImageBaseUrl.TrimEnd('/')}/{result.PosterPath.TrimStart('/')}";
+                        }
+                        await _movieRepository.UpdateAsync(existingMovie);
+                    }
+                }
+            }
+
+            if (existingMovie != null)
+            {
+                return existingMovie;
+            }
+
+            // Busca detalhes, créditos, trailer e classificação indicativa em paralelo para otimizar desempenho
+            var detailsTask = _tmdbClient.GetMovieDetailsAsync(result.Id);
+            var creditsTask = _tmdbClient.GetCreditsAsync(result.Id);
+            var trailerTask = _tmdbClient.GetTrailerUrlAsync(result.Id);
+            var ratingTask = _tmdbClient.GetReleaseDateCertificationAsync(result.Id);
+
+            await Task.WhenAll(detailsTask, creditsTask, trailerTask, ratingTask);
+
+            var details = await detailsTask;
+            var credits = await creditsTask;
+            var trailerUrl = await trailerTask;
+            var rating = await ratingTask;
+
+            // Mapeamento dos campos objetivos
+            var director = credits.Crew?.FirstOrDefault(c => c.Job.Equals("Director", StringComparison.OrdinalIgnoreCase))?.Name ?? "Desconhecido";
+            var cast = string.Join(", ", credits.Cast?.Take(5).Select(c => c.Name) ?? Array.Empty<string>());
+            
+            int releaseYear = 0;
+            if (DateTime.TryParse(details.ReleaseDate, out var date))
+            {
+                releaseYear = date.Year;
+            }
+            else if (!string.IsNullOrEmpty(details.ReleaseDate) && details.ReleaseDate.Length >= 4)
+            {
+                int.TryParse(details.ReleaseDate.Substring(0, 4), out releaseYear);
+            }
+
+            var duration = details.Runtime ?? 0;
+
+            // Gêneros
+            var genreNames = details.Genres?.Select(g => g.Name).ToList() ?? new List<string>();
+            var genresStr = genreNames.Count > 0 ? string.Join(", ", genreNames) : "Gênero não informado";
+
+            // Geração de descrição e sinopse: sempre gera baseada em fatos para evitar redistribuição de texto de terceiros
+            var synopsis = $"Acompanhe a história desta produção de {genresStr.ToLower()} que conta com direção de {director} e grande elenco incluindo {cast}. Lançado originalmente no ano de {releaseYear}.";
+            
+            var description = synopsis.Length > 200 
+                ? synopsis.Substring(0, 197) + "..." 
+                : synopsis;
+
+            var movie = new Movie
+            {
+                Id = Guid.NewGuid(),
+                Title = details.Title,
+                TmdbId = details.Id,
+                ReleaseYear = releaseYear,
+                DurationMinutes = duration,
+                ImageUrl = string.IsNullOrEmpty(details.PosterPath) ? string.Empty : $"{_tmdbSettings.ImageBaseUrl.TrimEnd('/')}/{details.PosterPath.TrimStart('/')}",
+                BackdropUrl = string.IsNullOrEmpty(details.BackdropPath) ? string.Empty : $"https://image.tmdb.org/t/p/w1280/{details.BackdropPath.TrimStart('/')}",
+                TrailerUrl = trailerUrl ?? string.Empty,
+                Director = director,
+                Cast = cast,
+                Description = description.Length > 1000 ? description.Substring(0, 997) + "..." : description,
+                Synopsis = synopsis.Length > 4000 ? synopsis.Substring(0, 3997) + "..." : synopsis,
+                Rating = rating ?? "Livre",
+                AverageRating = 0.0,
+                ReviewsCount = 0,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Genres = new List<Genre>()
+            };
+
+            // Mapeia os gêneros para as entidades locais existentes ou cria novos se necessário
+            foreach (var tg in details.Genres ?? new List<TmdbGenre>())
+            {
+                var localGenre = await _genreRepository.GetByNameAsync(tg.Name);
+                if (localGenre == null)
+                {
+                    localGenre = new Genre
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = tg.Name
+                    };
+                    await _genreRepository.AddAsync(localGenre);
+                }
+                movie.Genres.Add(localGenre);
+            }
+
+            // Salva o filme importado no banco local
+            await _movieRepository.AddAsync(movie);
+            return movie;
         }
 
         public async Task<StreamingAvailabilityResponse> GetStreamingAvailabilityAsync(Guid movieId)

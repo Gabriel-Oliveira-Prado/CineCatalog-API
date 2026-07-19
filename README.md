@@ -57,25 +57,24 @@ dotnet run --project "CineCatalog API/CineCatalog API.csproj"
 
 O Swagger fica disponível em `http://localhost:5024/swagger` (ou na porta mostrada pelo `dotnet run`).
 
-## Configuração
+## Configuração da API do TMDb
 
-Defina a conexão e as credenciais do TMDB via `appsettings.*.json`, User Secrets ou variáveis de ambiente:
+Este projeto usa a API pública do [TMDb](https://www.themoviedb.org/) para buscar
+e importar filmes automaticamente (arquitetura cache-aside: busca primeiro no
+banco local, só consulta o TMDb quando necessário).
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=CineCatalogDb;Trusted_Connection=True"
-  },
-  "Tmdb": {
-    "ApiKey": "sua-chave-ou-token",
-    "BaseUrl": "https://api.themoviedb.org/3",
-    "ImageBaseUrl": "https://image.tmdb.org/t/p/w500",
-    "WatchRegion": "BR"
-  }
-}
-```
+Para rodar o projeto localmente, você precisa da sua própria chave:
 
-O cliente aceita chave v3 na query string ou token de leitura v4 no cabeçalho `Authorization: Bearer`.
+1. Crie uma conta gratuita em https://www.themoviedb.org/signup
+2. Acesse https://www.themoviedb.org/settings/api e gere uma API Key (v3) ou
+   um Token de Leitura da API (v4)
+3. Configure localmente com o .NET User Secrets (nunca commitar a chave):
+   ```bash
+   dotnet user-secrets set "Tmdb:ApiKey" "sua-chave-aqui"
+   ```
+
+Este produto usa a API do TMDb mas não é endossado ou certificado pelo TMDb.
+
 
 ## Testes
 

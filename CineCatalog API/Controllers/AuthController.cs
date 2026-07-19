@@ -5,6 +5,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using CineCatalog_API.Application.DTOs;
 using CineCatalog_API.Application.Interfaces;
 
@@ -38,6 +39,7 @@ namespace CineCatalog_API.Controllers
         /// Cadastra um novo usuário no sistema.
         /// </summary>
         [HttpPost("register")]
+        [EnableRateLimiting("auth-limiter")]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(UserResponse))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -57,6 +59,7 @@ namespace CineCatalog_API.Controllers
         /// Realiza a autenticação de um usuário.
         /// </summary>
         [HttpPost("login")]
+        [EnableRateLimiting("auth-limiter")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponse))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using System;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,9 +27,29 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultPolicy", policy =>
     {
-        policy.AllowAnyOrigin()
+        var frontendUrl = builder.Configuration["FrontendUrl"] ?? "http://localhost:52011";
+        policy.WithOrigins(frontendUrl)
               .AllowAnyMethod()
               .AllowAnyHeader();
+    });
+});
+
+// Configure Rate Limiting by IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth-limiter", httpContext =>
+    {
+        var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? httpContext.Request.Headers["X-Forwarded-For"].ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetFixedWindowLimiter(ipAddress, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
     });
 });
 
@@ -55,6 +77,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 app.UseCors("DefaultPolicy");
+app.UseRateLimiter();
 
 // Authentication & Authorization (Critical order!)
 app.UseAuthentication();

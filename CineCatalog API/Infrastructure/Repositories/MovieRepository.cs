@@ -92,17 +92,17 @@ namespace CineCatalog_API.Infrastructure.Repositories
             {
                 query = sortBy.ToLower() switch
                 {
-                    "title" => isDescending ? query.OrderByDescending(m => m.Title) : query.OrderBy(m => m.Title),
-                    "releaseyear" => isDescending ? query.OrderByDescending(m => m.ReleaseYear) : query.OrderBy(m => m.ReleaseYear),
-                    "durationminutes" => isDescending ? query.OrderByDescending(m => m.DurationMinutes) : query.OrderBy(m => m.DurationMinutes),
-                    "averagerating" => isDescending ? query.OrderByDescending(m => m.AverageRating) : query.OrderBy(m => m.AverageRating),
-                    "createdat" => isDescending ? query.OrderByDescending(m => m.CreatedAt) : query.OrderBy(m => m.CreatedAt),
-                    _ => query.OrderBy(m => m.Title) // Default sort
+                    "title" => isDescending ? query.OrderByDescending(m => m.Title).ThenBy(m => m.Id) : query.OrderBy(m => m.Title).ThenBy(m => m.Id),
+                    "releaseyear" => isDescending ? query.OrderByDescending(m => m.ReleaseYear).ThenBy(m => m.Id) : query.OrderBy(m => m.ReleaseYear).ThenBy(m => m.Id),
+                    "durationminutes" => isDescending ? query.OrderByDescending(m => m.DurationMinutes).ThenBy(m => m.Id) : query.OrderBy(m => m.DurationMinutes).ThenBy(m => m.Id),
+                    "averagerating" => isDescending ? query.OrderByDescending(m => m.AverageRating).ThenBy(m => m.Id) : query.OrderBy(m => m.AverageRating).ThenBy(m => m.Id),
+                    "createdat" => isDescending ? query.OrderByDescending(m => m.CreatedAt).ThenBy(m => m.Id) : query.OrderBy(m => m.CreatedAt).ThenBy(m => m.Id),
+                    _ => query.OrderBy(m => m.Title).ThenBy(m => m.Id) // Default sort
                 };
             }
             else
             {
-                query = query.OrderBy(m => m.Title);
+                query = query.OrderBy(m => m.Title).ThenBy(m => m.Id);
             }
 
             // 3. Pagination
