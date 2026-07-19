@@ -37,5 +37,11 @@ namespace CineCatalog_API.Infrastructure.Repositories
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
         }
+
+        public async Task DeleteAsync(User user)
+        {
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
     }
 }

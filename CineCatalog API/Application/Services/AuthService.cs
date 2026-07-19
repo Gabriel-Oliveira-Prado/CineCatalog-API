@@ -167,5 +167,40 @@ namespace CineCatalog_API.Application.Services
 
             return _mapper.Map<UserResponse>(user);
         }
+
+        public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException("Usuário não encontrado.");
+            }
+
+            if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+            {
+                throw new BadRequestException("A senha atual está incorreta.");
+            }
+
+            if (request.CurrentPassword == request.NewPassword)
+            {
+                throw new BadRequestException("A nova senha não pode ser igual à senha atual.");
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userRepository.UpdateAsync(user);
+        }
+
+        public async Task DeleteAccountAsync(Guid userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException("Usuário não encontrado.");
+            }
+
+            await _userRepository.DeleteAsync(user);
+        }
     }
 }

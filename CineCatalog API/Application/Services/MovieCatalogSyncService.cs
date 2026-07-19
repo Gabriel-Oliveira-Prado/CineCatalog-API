@@ -179,11 +179,17 @@ namespace CineCatalog_API.Application.Services
                 }
             }
 
-            // Retorna a lista atualizada do banco de dados contendo todos os filmes correspondentes
-            var (updatedLocalMovies, _) = await _movieRepository.GetFilteredAndPaginatedAsync(
-                searchTerm, null, null, null, null, null, 1, 50, "Title", false);
+            // Mescla os resultados locais iniciais com os importados do TMDb, removendo duplicados por Id
+            var mergedMovies = localMovies.ToList();
+            foreach (var movie in importedMovies)
+            {
+                if (!mergedMovies.Any(m => m.Id == movie.Id))
+                {
+                    mergedMovies.Add(movie);
+                }
+            }
 
-            return _mapper.Map<List<MovieResponse>>(updatedLocalMovies.ToList());
+            return _mapper.Map<List<MovieResponse>>(mergedMovies);
         }
 
         public async Task<List<MovieResponse>> GetTrendingMoviesAsync()
@@ -323,14 +329,14 @@ namespace CineCatalog_API.Application.Services
             // Filmes cadastrados manualmente continuam exibindo o que foi salvo localmente.
             if (!movie.TmdbId.HasValue)
             {
-                return CreateAvailabilityResponse(region, storedPlatforms);
+                return CreateAvailabilityResponse(region, storedPlatforms, movie.Title);
             }
 
             var providersResponse = await _tmdbClient.GetWatchProvidersAsync(movie.TmdbId.Value);
             if (providersResponse == null)
             {
                 // Não apagamos uma resposta válida se o provedor externo estiver temporariamente indisponível.
-                return CreateAvailabilityResponse(region, storedPlatforms);
+                return CreateAvailabilityResponse(region, storedPlatforms, movie.Title);
             }
 
             providersResponse.Results.TryGetValue(region, out var providersForRegion);
@@ -350,6 +356,11 @@ namespace CineCatalog_API.Application.Services
                 await _movieRepository.UpdateAsync(movie);
             }
 
+            if (string.IsNullOrEmpty(link) || link.Contains("justwatch.com"))
+            {
+                link = $"https://www.google.com/search?q=onde+assistir+{Uri.EscapeDataString(movie.Title)}";
+            }
+
             return new StreamingAvailabilityResponse
             {
                 Region = region,
@@ -358,12 +369,17 @@ namespace CineCatalog_API.Application.Services
             };
         }
 
-        private static StreamingAvailabilityResponse CreateAvailabilityResponse(string region, List<StreamingPlatformResponse> platforms)
+        private static StreamingAvailabilityResponse CreateAvailabilityResponse(string region, List<StreamingPlatformResponse> platforms, string movieTitle)
         {
+            var link = platforms.Select(platform => platform.Link).FirstOrDefault(l => !string.IsNullOrWhiteSpace(l));
+            if (string.IsNullOrEmpty(link) || link.Contains("justwatch.com"))
+            {
+                link = $"https://www.google.com/search?q=onde+assistir+{Uri.EscapeDataString(movieTitle)}";
+            }
             return new StreamingAvailabilityResponse
             {
                 Region = region,
-                Link = platforms.Select(platform => platform.Link).FirstOrDefault(link => !string.IsNullOrWhiteSpace(link)),
+                Link = link,
                 Platforms = platforms
             };
         }
@@ -431,8 +447,11 @@ namespace CineCatalog_API.Application.Services
                 return "https://www.clarotvmais.com.br/";
             if (name.Contains("youtube"))
                 return $"https://www.youtube.com/results?search_query={query}";
+            if (name.Contains("mercado"))
+                return "https://play.mercadolivre.com.br/";
 
-            return "https://www.justwatch.com/";
+            var platformQuery = Uri.EscapeDataString($"{movieTitle} {providerName}");
+            return $"https://www.google.com/search?q=assistir+{platformQuery}";
         }
     }
 }

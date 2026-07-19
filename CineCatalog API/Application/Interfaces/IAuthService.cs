@@ -11,5 +11,7 @@ namespace CineCatalog_API.Application.Interfaces
         Task<TokenResponse> RefreshTokenAsync(RefreshTokenRequest request);
         Task<UserResponse> GetProfileAsync(Guid userId);
         Task<UserResponse> UpdateProfileAsync(Guid userId, UserUpdateProfileRequest request);
+        Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
+        Task DeleteAccountAsync(Guid userId);
     }
 }

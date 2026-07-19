@@ -45,4 +45,10 @@ namespace CineCatalog_API.Application.DTOs
         public string Email { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
     }
+
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
 }
