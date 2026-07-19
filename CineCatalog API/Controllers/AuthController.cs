@@ -20,19 +20,22 @@ namespace CineCatalog_API.Controllers
         private readonly IValidator<UserLoginRequest> _loginValidator;
         private readonly IValidator<UserUpdateProfileRequest> _profileValidator;
         private readonly IValidator<ChangePasswordRequest> _changePasswordValidator;
+        private readonly IValidator<RefreshTokenRequest> _refreshTokenValidator;
 
         public AuthController(
             IAuthService authService,
             IValidator<UserRegisterRequest> registerValidator,
             IValidator<UserLoginRequest> loginValidator,
             IValidator<UserUpdateProfileRequest> profileValidator,
-            IValidator<ChangePasswordRequest> changePasswordValidator)
+            IValidator<ChangePasswordRequest> changePasswordValidator,
+            IValidator<RefreshTokenRequest> refreshTokenValidator)
         {
             _authService = authService;
             _registerValidator = registerValidator;
             _loginValidator = loginValidator;
             _profileValidator = profileValidator;
             _changePasswordValidator = changePasswordValidator;
+            _refreshTokenValidator = refreshTokenValidator;
         }
 
         /// <summary>
@@ -83,6 +86,12 @@ namespace CineCatalog_API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
         {
+            var validationResult = await _refreshTokenValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.ToDictionary());
+            }
+
             var response = await _authService.RefreshTokenAsync(request);
             return Ok(response);
         }

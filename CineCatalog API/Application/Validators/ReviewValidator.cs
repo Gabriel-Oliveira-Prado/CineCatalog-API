@@ -11,6 +11,8 @@ namespace CineCatalog_API.Application.Validators
                 .InclusiveBetween(1, 5).WithMessage("A avaliação deve ser uma nota de 1 a 5.");
 
             RuleFor(x => x.Comment)
+                .Must(c => string.IsNullOrEmpty(c) || !string.IsNullOrWhiteSpace(c))
+                .WithMessage("O comentário não pode consistir apenas de espaços em branco.")
                 .MaximumLength(2000).WithMessage("O comentário não pode exceder 2000 caracteres.");
         }
     }
@@ -23,6 +25,8 @@ namespace CineCatalog_API.Application.Validators
                 .InclusiveBetween(1, 5).WithMessage("A avaliação deve ser uma nota de 1 a 5.");
 
             RuleFor(x => x.Comment)
+                .Must(c => string.IsNullOrEmpty(c) || !string.IsNullOrWhiteSpace(c))
+                .WithMessage("O comentário não pode consistir apenas de espaços em branco.")
                 .MaximumLength(2000).WithMessage("O comentário não pode exceder 2000 caracteres.");
         }
     }

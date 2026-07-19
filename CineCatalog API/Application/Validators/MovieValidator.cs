@@ -38,6 +38,33 @@ namespace CineCatalog_API.Application.Validators
                 .NotEmpty().WithMessage("A classificação indicativa é obrigatória.")
                 .MaximumLength(20).WithMessage("A classificação indicativa não pode exceder 20 caracteres.");
 
+            RuleFor(x => x.ImageUrl)
+                .NotEmpty().WithMessage("A URL do pôster é obrigatória.")
+                .MaximumLength(500).WithMessage("A URL do pôster não pode exceder 500 caracteres.")
+                .Must(uri => Uri.TryCreate(uri, UriKind.Absolute, out var result) && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps))
+                .WithMessage("A URL do pôster deve ser um link HTTP/HTTPS válido.");
+
+            RuleFor(x => x.TrailerUrl)
+                .MaximumLength(500).WithMessage("A URL do trailer não pode exceder 500 caracteres.")
+                .Must(uri => string.IsNullOrEmpty(uri) || (Uri.TryCreate(uri, UriKind.Absolute, out var result) && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps)))
+                .WithMessage("A URL do trailer deve ser um link HTTP/HTTPS válido.");
+
+            RuleFor(x => x.StreamingPlatforms)
+                .Must(json => 
+                {
+                    if (string.IsNullOrEmpty(json)) return true;
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        return doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                })
+                .WithMessage("As plataformas de streaming devem ser um array JSON válido.");
+
             RuleFor(x => x.GenreIds)
                 .NotEmpty().WithMessage("O filme deve conter pelo menos um gênero cadastrado.");
         }
@@ -76,6 +103,33 @@ namespace CineCatalog_API.Application.Validators
             RuleFor(x => x.Rating)
                 .NotEmpty().WithMessage("A classificação indicativa é obrigatória.")
                 .MaximumLength(20).WithMessage("A classificação indicativa não pode exceder 20 caracteres.");
+
+            RuleFor(x => x.ImageUrl)
+                .NotEmpty().WithMessage("A URL do pôster é obrigatória.")
+                .MaximumLength(500).WithMessage("A URL do pôster não pode exceder 500 caracteres.")
+                .Must(uri => Uri.TryCreate(uri, UriKind.Absolute, out var result) && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps))
+                .WithMessage("A URL do pôster deve ser um link HTTP/HTTPS válido.");
+
+            RuleFor(x => x.TrailerUrl)
+                .MaximumLength(500).WithMessage("A URL do trailer não pode exceder 500 caracteres.")
+                .Must(uri => string.IsNullOrEmpty(uri) || (Uri.TryCreate(uri, UriKind.Absolute, out var result) && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps)))
+                .WithMessage("A URL do trailer deve ser um link HTTP/HTTPS válido.");
+
+            RuleFor(x => x.StreamingPlatforms)
+                .Must(json => 
+                {
+                    if (string.IsNullOrEmpty(json)) return true;
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        return doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array;
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                })
+                .WithMessage("As plataformas de streaming devem ser um array JSON válido.");
 
             RuleFor(x => x.GenreIds)
                 .NotEmpty().WithMessage("O filme deve conter pelo menos um gênero cadastrado.");

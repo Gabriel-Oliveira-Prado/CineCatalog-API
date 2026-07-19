@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,17 @@ namespace CineCatalog_API.Controllers
     public class GenresController : ControllerBase
     {
         private readonly IGenreService _genreService;
+        private readonly IValidator<GenreCreateRequest> _createValidator;
+        private readonly IValidator<GenreUpdateRequest> _updateValidator;
 
-        public GenresController(IGenreService genreService)
+        public GenresController(
+            IGenreService genreService,
+            IValidator<GenreCreateRequest> createValidator,
+            IValidator<GenreUpdateRequest> updateValidator)
         {
             _genreService = genreService;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
         }
 
         /// <summary>
@@ -54,9 +62,10 @@ namespace CineCatalog_API.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> Create([FromBody] GenreCreateRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
+            var validationResult = await _createValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
             {
-                return BadRequest("O nome do gênero não pode ser vazio.");
+                return BadRequest(validationResult.ToDictionary());
             }
 
             var response = await _genreService.CreateAsync(request);
@@ -75,9 +84,10 @@ namespace CineCatalog_API.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] GenreUpdateRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
+            var validationResult = await _updateValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
             {
-                return BadRequest("O nome do gênero não pode ser vazio.");
+                return BadRequest(validationResult.ToDictionary());
             }
 
             var response = await _genreService.UpdateAsync(id, request);
